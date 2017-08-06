@@ -1,53 +1,52 @@
-# **Finding Lane Lines on the Road** 
-[![Udacity - Self-Driving Car NanoDegree](https://s3.amazonaws.com/udacity-sdc/github/shield-carnd.svg)](http://www.udacity.com/drive)
+# **Finding Lane Lines on the Road**
 
-<img src="examples/laneLines_thirdPass.jpg" width="480" alt="Combined Image" />
+[challenge_problem]: ./challenge_problem.jpg "Problematic output in Challenge video"
+[challenge_ok]: ./challenge_problem.jpg "Regular output in Challenge video"
 
-Overview
----
+## How the pipeline works
 
-When we drive, we use our eyes to decide where to go.  The lines on the road that show us where the lanes are act as our constant reference for where to steer the vehicle.  Naturally, one of the first things we would like to do in developing a self-driving car is to automatically detect lane lines using an algorithm.
+I started with a pipeline very similar to the one presented in the course.
+I first convert the input image to greyscale and apply a gaussian blur of size 5.
+Then I apply canny edge detection with a `low_threshold` of 50 and
+`high_threshold` of 150.
+Now crop the output to only include the region of interest.
+This is helpful later for drawing the solid lines.
+I then apply the hough transform with `min_line_length` of 20
+and `max_line_gap` of 40. I found that this helps finding
+longer line segments.
 
-In this project you will detect lane lines in images using Python and OpenCV.  OpenCV means "Open-Source Computer Vision", which is a package that has many useful tools for analyzing images.  
+To draw the 2 lines for left and right, I first split the lines found in 2 batches.
+To decide which side a line segment belongs to, I look at the midpoint.
+This is where it comes in handy that I applied the region of interest filter early,
+as I can take most of then as they are.
 
-To complete the project, two files will be submitted: a file containing project code and a file containing a brief write up explaining your solution. We have included template files to be used both for the [code](https://github.com/udacity/CarND-LaneLines-P1/blob/master/P1.ipynb) and the [writeup](https://github.com/udacity/CarND-LaneLines-P1/blob/master/writeup_template.md).The code file is called P1.ipynb and the writeup template is writeup_template.md 
+I then convert all line segments into their parameter form, so that I can take a weighted average.
+I decided to thow all the one out, where $abs(sin(angle))<0.5$.
+This corresponds to a far shallower angle than the lane markings, so this helps clean up some of the falso positives.
+It also mitigates a potential division by zero error, but this could also be dealt with differently if necessary.
 
-To meet specifications in the project, take a look at the requirements in the [project rubric](https://review.udacity.com/#!/rubrics/322/view)
+To average the found parameters, I use the square of the length of the corresponding segments as weight.
 
+## Evaluation
 
-Creating a Great Writeup
----
-For this project, a great writeup should provide a detailed response to the "Reflection" section of the [project rubric](https://review.udacity.com/#!/rubrics/322/view). There are three parts to the reflection:
+To start off here is an output of the pipeline for the challenge video:
+![challenge_ok]
 
-1. Describe the pipeline
+Looking at just this you might assume that the pipeline is fairly robust.
+The pipeline throws out horizontal line segments, which helps with the hood of the car.
+It also tries to minimize noise by looking at longer line segments with more weight.
+This, however is no guarantee that it won't get distracted, as can be seen in the following output:
+![challenge_problem]
 
-2. Identify any shortcomings
+In this instance, the shadows of the tree create strong lines.
+They also make the edge of the lane markings less clear.
 
-3. Suggest possible improvements
+The chosen design of just looking at the length does help in reducing noise,
+but it is not very good at eliminating outliers like shadows or different tarmak.
 
-We encourage using images in your writeup to demonstrate how your pipeline works.  
+## Possible improvements
 
-All that said, please be concise!  We're not looking for you to write a book here: just a brief description.
-
-You're not required to use markdown for your writeup.  If you use another method please just submit a pdf of your writeup. Here is a link to a [writeup template file](https://github.com/udacity/CarND-LaneLines-P1/blob/master/writeup_template.md). 
-
-
-The Project
----
-
-## If you have already installed the [CarND Term1 Starter Kit](https://github.com/udacity/CarND-Term1-Starter-Kit/blob/master/README.md) you should be good to go!   If not, you should install the starter kit to get started on this project. ##
-
-**Step 1:** Set up the [CarND Term1 Starter Kit](https://classroom.udacity.com/nanodegrees/nd013/parts/fbf77062-5703-404e-b60c-95b78b2f3f9e/modules/83ec35ee-1e02-48a5-bdb7-d244bd47c2dc/lessons/8c82408b-a217-4d09-b81d-1bda4c6380ef/concepts/4f1870e0-3849-43e4-b670-12e6f2d4b7a7) if you haven't already.
-
-**Step 2:** Open the code in a Jupyter Notebook
-
-You will complete the project code in a Jupyter notebook.  If you are unfamiliar with Jupyter Notebooks, check out <A HREF="https://www.packtpub.com/books/content/basics-jupyter-notebook-and-python" target="_blank">Cyrille Rossant's Basics of Jupyter Notebook and Python</A> to get started.
-
-Jupyter is an Ipython notebook where you can run blocks of code and see results interactively.  All the code for this project is contained in a Jupyter notebook. To start Jupyter in your browser, use terminal to navigate to your project directory and then run the following command at the terminal prompt (be sure you've activated your Python 3 carnd-term1 environment as described in the [CarND Term1 Starter Kit](https://github.com/udacity/CarND-Term1-Starter-Kit/blob/master/README.md) installation instructions!):
-
-`> jupyter notebook`
-
-A browser window will appear showing the contents of the current directory.  Click on the file called "P1.ipynb".  Another browser window will appear displaying the notebook.  Follow the instructions in the notebook to complete the project.  
-
-**Step 3:** Complete the project and submit both the Ipython notebook and the project writeup
-
+At the moment I only look at the line length and don't make any further assumptions.
+I do know however, that lane markings roughly go towards the horizon and the car is rougly traveling in that direction.
+With this knowledge, I could rank the found line segments by their angle as well as their length.
+The further away the line segment is from this assimed trajectory, the less likely the match.
