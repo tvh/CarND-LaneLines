@@ -1,7 +1,7 @@
 # **Finding Lane Lines on the Road**
 
 [challenge_problem]: ./challenge_problem.jpg "Problematic output in Challenge video"
-[challenge_ok]: ./challenge_problem.jpg "Regular output in Challenge video"
+[challenge_ok]: ./challenge_ok.jpg "Regular output in Challenge video"
 
 ## How the pipeline works
 
